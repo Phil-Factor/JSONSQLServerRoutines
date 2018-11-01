@@ -1,0 +1,1 @@
+This repository contains several temporary stored procedures that can be used for inserting JSON data into SQL Server or export the data from SQL Server. They are described in a series of articles on the Red-Gate site and in Simple-Talk

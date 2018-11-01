@@ -1,4 +1,17 @@
 CREATE OR ALTER PROCEDURE #SaveJSONToFile
+/**
+Summary: >
+  This is a utility stored procedure for
+  saving text to a file It is designed to save
+  as utf-8 for JSON files but will do any file 
+
+Author: phil factor
+Date: 01/11/2018
+Examples:
+     Execute #SaveJSONToFile @theString=@TheJSON, @filename=@destination'
+Returns: >
+  nothing
+**/
   @TheString NVARCHAR(MAX),  @Filename NVARCHAR(255),
   @Unicode INT=8 --0 for not unicode, 8 for utf8 and 16 for utf16
 AS
