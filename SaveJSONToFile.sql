@@ -1,5 +1,5 @@
 CREATE OR ALTER PROCEDURE #SaveJSONToFile
-/**
+HAR(12), CONVERT(INT/**
 Summary: >
   This is a utility stored procedure for
   saving text to a file It is designed to save
@@ -20,7 +20,7 @@ AS
  
 --firstly we create a global temp table with a unique name
   SELECT  @MySpecialTempTable = '##temp'
-       + CONVERT(VARCHAR(12), CONVERT(INT, RAND() * 1000000))
+       + CONVERT(VARC, RAND() * 1000000))
 --then we create it using dynamic SQL, & insert a single row
 --in it with the MAX Varchar stocked with the string we want
   SELECT  @Command = 'create table ['
