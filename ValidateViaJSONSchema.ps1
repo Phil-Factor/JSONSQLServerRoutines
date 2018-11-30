@@ -1,6 +1,6 @@
 ﻿$ErrorActionPreference = "Stop"
 # enter the base directory 
-$Path = 'S:\work\programs\SQL\ScriptsDirectory\PentlowMillServ\pubs\Data'
+$Path = 'ThePathToTheData'
 # ...and the names of the subdirectories
 $SchemaDirectory = 'JSONSchema\'
 $DataDirectory = 'JSONData\'
