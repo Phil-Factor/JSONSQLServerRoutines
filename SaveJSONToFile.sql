@@ -1,5 +1,5 @@
 CREATE OR ALTER PROCEDURE #SaveJSONToFile
-HAR(12), CONVERT(INT/**
+/**
 Summary: >
   This is a utility stored procedure for
   saving text to a file It is designed to save
@@ -16,11 +16,10 @@ Returns: >
   @Unicode INT=8 --0 for not unicode, 8 for utf8 and 16 for utf16
 AS
   SET NOCOUNT ON
-  DECLARE @MySpecialTempTable sysname, @Command NVARCHAR(4000) , @RESULT INT
- 
+  DECLARE @MySpecialTempTable sysname, @Command NVARCHAR(4000) , @RESULT INT;
 --firstly we create a global temp table with a unique name
-  SELECT  @MySpecialTempTable = '##temp'
-       + CONVERT(VARC, RAND() * 1000000))
+SELECT @MySpecialTempTable =
+  '##temp' + Convert(VARCHAR(12), Convert(INT, Rand() * 1000000));
 --then we create it using dynamic SQL, & insert a single row
 --in it with the MAX Varchar stocked with the string we want
   SELECT  @Command = 'create table ['
