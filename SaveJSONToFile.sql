@@ -34,8 +34,8 @@ insert into ['
 --then we execute the BCP to save the file
   SELECT  @Command = 'bcp "select BulkCol from ['
           + @MySpecialTempTable + ']'
-          + '" queryout '
-          + @Filename + ' '
+          + '" queryout "'
+          + @Filename + '" '
          + CASE @Unicode 
 		     WHEN 0 THEN '-c' 
 		     WHEN 8 THEN '-c -C 65001' 

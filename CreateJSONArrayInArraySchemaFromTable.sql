@@ -72,18 +72,25 @@ SELECT @jsonschema=
 	RAISERROR ('invalid schema "%s"',16,1,@jsonSchema)
 	IF @jsonschema IS NULL RAISERROR ('Null schema',16,1)
 GO
+
+/*
+USE Adventureworks2016
 DECLARE @ourPath sysname = 'C:\data\RawData\JsonSchema\AdventureWorks\';
 Declare @command NVARCHAR(4000)= '
 print ''Creating JSON file for ?''
 DECLARE @Json NVARCHAR(MAX)
-EXECUTE #CreateJSONArrayInArraySchemaFromTable @TableSpec=''?'',@JSONData=@json OUTPUT
+EXECUTE #CreateJSONArrayInArraySchemaFromTable @TableSpec=''?'',@JSONSchema=@json OUTPUT
 CREATE TABLE ##myTemp (Bulkcol nvarchar(MAX))
 INSERT INTO ##myTemp (Bulkcol) SELECT @JSON
 print ''Writing out ?''
 EXECUTE xp_cmdshell ''bcp ##myTemp out '+@ourPath+'?.JSON -c -C 65001 -T''
 DROP TABLE ##myTemp'
 EXECUTE sp_msforeachtable @command
+*/
 GO
+
+
+
 
 
 

@@ -29,7 +29,7 @@ AS
 
     IF @table IS NULL SELECT @table = ParseName(@Tablespec, 1);
     IF @Schema IS NULL SELECT @Schema = ParseName(@Tablespec, 2);
-    IF @database IS NULL SELECT @database = ParseName(@Tablespec, 3);
+    IF @database IS NULL SELECT @database = Coalesce(ParseName(@Tablespec, 3),Db_Name());
     IF @table IS NULL OR @Schema IS NULL OR @database IS NULL
       RAISERROR('{"error":"must have the table details"}', 16, 1);
 
