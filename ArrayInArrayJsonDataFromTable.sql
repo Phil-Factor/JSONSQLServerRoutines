@@ -18,7 +18,7 @@ Examples: >
     PRINT @Json
 
   - DECLARE @Json NVARCHAR(MAX)
-	EXECUTE #ArrayInArrayJsonDataFromTable @TableSpec='adventureworks2016.person.person',@JSONData=@json OUTPUT
+	EXECUTE #ArrayInArrayJsonDataFromTable @TableSpec='bigpubs.[dbo].[oldTitles]',@JSONData=@json OUTPUT
     PRINT @Json
 Returns: >
   The JSON data
@@ -35,7 +35,7 @@ AS
 
     IF @table IS NULL SELECT @table = ParseName(@Tablespec, 1);
     IF @Schema IS NULL SELECT @Schema = ParseName(@Tablespec, 2);
-    IF @database IS NULL SELECT @database = ParseName(@Tablespec, 3);
+    IF @database IS NULL SELECT @database = Coalesce(ParseName(@Tablespec, 3),Db_Name());
     IF @table IS NULL OR @Schema IS NULL OR @database IS NULL
       RAISERROR('{"error":"must have the table details"}', 16, 1);
 
@@ -45,27 +45,21 @@ AS
                      + QuoteName(@Schema) + '.' + QuoteName(@table)
               );
 
+    DECLARE @params NVARCHAR(MAX) =(
+      SELECT String_Agg(
+        CASE
+		 WHEN user_type_id IN (128, 129, 130) 
+		   THEN'convert(nvarchar(100),' + name + ') as "' + name + '"'
+          --hierarchyid (128) geometry (130) and geography types (129) can be coerced. 
+         WHEN user_type_id IN (35) 
+		   THEN 'convert(varchar(max),' + name + ') as "' + name + '"'
+         WHEN user_type_id IN (99) 
+		   THEN 'convert(nvarchar(max),' + name + ') as "' + name + '"'
+         WHEN user_type_id IN (34) 
+		   THEN 'convert(varbinary(max),' + name + ') as "' + name + '"'
+		 ELSE QuoteName(name) END, ', ' )
+      FROM sys.dm_exec_describe_first_result_set(@SourceCode, NULL, 1) );
 
-    DECLARE @params NVARCHAR(MAX) =
-              (
-              SELECT 
-			    String_Agg(
-                  CASE WHEN user_type_id IN (128, 129, 130) THEN
-                    'convert(nvarchar(100),' + name
-                    + ') as "' + name + '"'
-                  --hierarchyid (128) geometry (130) and geography types (129) can be coerced. 
-                  WHEN user_type_id IN (35) THEN
-                    'convert(varchar(max),' + name + ') as "'
-                    + name + '"'
-                  WHEN user_type_id IN (99) THEN
-                    'convert(nvarchar(max),' + name + ') as "'
-                    + name + '"'
-                  WHEN user_type_id IN (34) THEN
-                    'convert(varbinary(max),' + name
-                    + ') as "' + name + '"' ELSE
-                                            QuoteName(name) END, ', ' )
-                FROM sys.dm_exec_describe_first_result_set(@SourceCode, NULL, 1)
-              );
 
 DECLARE @expression NVARCHAR(800) =	'
 USE ' + @database + '
@@ -88,15 +82,6 @@ FROM
    GROUP BY f.[Key])f(EachLine)
   END;
 GO
-
-
-
-
-
-
-
-
-
 
 
 

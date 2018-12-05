@@ -31,7 +31,7 @@ DECLARE @required NVARCHAR(max), @NoColumns INT, @properties NVARCHAR(max);
 			
 		   IF @table is NULL SELECT @table=ParseName(@Tablespec,1)
 		   IF @Schema is NULL SELECT @schema=ParseName(@Tablespec,2)
-		   IF @Database is NULL SELECT @Database=ParseName(@Tablespec,3)
+		   IF @Database is NULL SELECT @Database=Coalesce(ParseName(@Tablespec,3),Db_Name())
 		   IF @table IS NULL OR @schema IS NULL OR @database IS NULL
 		      RAISERROR  ('{"error":"must have the table details"}',16,1)
            
