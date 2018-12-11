@@ -1,9 +1,8 @@
-
-
 CREATE OR ALTER PROCEDURE #ArrayInArrayJsonDataFromTable
   /**
 Summary: >
-  This gets the JSON data from a table in Array
+  This gets the JSON data from a table into 
+  Array-in-Array JSON Format
 Author: phil factor
 Date: 26/10/2018
 
@@ -11,14 +10,14 @@ Examples: >
   - use Adventureworks2016
     DECLARE @Json NVARCHAR(MAX)
     EXECUTE #ArrayInArrayJsonDataFromTable
-      @database='pubs', 
-	  @Schema ='dbo', 
+      @database='Adventureworks2016', 
+	  @Schema ='product', 
 	  @table= 'authors',
 	  @JSONData=@json OUTPUT
     PRINT @Json
 
   - DECLARE @Json NVARCHAR(MAX)
-	EXECUTE #ArrayInArrayJsonDataFromTable @TableSpec='bigpubs.[dbo].[oldTitles]',@JSONData=@json OUTPUT
+	EXECUTE #ArrayInArrayJsonDataFromTable @TableSpec='Adventureworks2016.[production].[document]',@JSONData=@json OUTPUT
     PRINT @Json
 Returns: >
   The JSON data
@@ -28,7 +27,6 @@ Returns: >
   )
 AS
   BEGIN
-    DECLARE @Data NVARCHAR(MAX);
     IF Coalesce(@table, @Tablespec) IS NULL
     OR Coalesce(@Schema, @Tablespec) IS NULL
       RAISERROR('{"error":"must have the table details"}', 16, 1);
@@ -39,60 +37,52 @@ AS
     IF @table IS NULL OR @Schema IS NULL OR @database IS NULL
       RAISERROR('{"error":"must have the table details"}', 16, 1);
 
-    DECLARE @SourceCode NVARCHAR(255) =
-              (
-              SELECT 'SELECT * FROM ' + QuoteName(@database) + '.'
-                     + QuoteName(@Schema) + '.' + QuoteName(@table)
-              );
+DECLARE @SourceCode NVARCHAR(255) =
+          (
+          SELECT 'SELECT * FROM ' + QuoteName(@database) + '.'
+                 + QuoteName(@Schema) + '.' + QuoteName(@table)
+          );
 
     DECLARE @params NVARCHAR(MAX) =(
-      SELECT String_Agg(
-        CASE
-		 WHEN user_type_id IN (128, 129, 130) 
-		   THEN'convert(nvarchar(100),' + name + ') as "' + name + '"'
-          --hierarchyid (128) geometry (130) and geography types (129) can be coerced. 
-         WHEN user_type_id IN (35) 
-		   THEN 'convert(varchar(max),' + name + ') as "' + name + '"'
-         WHEN user_type_id IN (99) 
-		   THEN 'convert(nvarchar(max),' + name + ') as "' + name + '"'
-         WHEN user_type_id IN (34) 
-		   THEN 'convert(varbinary(max),' + name + ') as "' + name + '"'
-		 ELSE QuoteName(name) END, ', ' )
-      FROM sys.dm_exec_describe_first_result_set(@SourceCode, NULL, 1) );
-
-
-DECLARE @expression NVARCHAR(800) =	'
+ SELECT '''[''+'
+   +String_Agg(
+      CASE
+   --hierarchyid, geometry,and geography types  can be coerced. 
+		WHEN system_type_id IN (240) 
+		  THEN 'Coalesce(''"''+convert(nvarchar(max),' + QuoteName(name) + ')+''"'',''null'')'
+		--text and ntext
+		WHEN system_type_id IN (35,99)   
+		  THEN 'Coalesce(''"''+convert(nvarchar(max),' + QuoteName(name) + ')+''"'',''null'')'
+		--image varbinary
+		WHEN system_type_id IN (34,165)  
+		  THEN 'Coalesce(''"''+convert(nvarchar(max),' + QuoteName(name) + ',2)+''"'',''null'')'
+		--dates
+		--WHEN r.system_type_id IN (165)  THEN 'Coalesce(''"''+convert(varbinary(max),' + QuoteName(name) + ')+''"'',''null'')'
+		WHEN r.system_type_id IN (40,41,42,43,58,61) 
+		  THEN 'Coalesce(''"''+convert(nvarchar(max),'+QuoteName(name)+',126)+''"'',''null'')' 
+		--numbers
+		WHEN r.system_type_id IN (48,52,56,59,60,62,106,108,122,127) 
+		  THEN 'Coalesce(convert(nvarchar(max),'+QuoteName(name)+'),''null'')' 
+		--uniqueIdentifier
+		WHEN system_type_id IN (36) 
+		  THEN 'Coalesce(''"''+convert(nvarchar(max),' + QuoteName(name) + ')+''"'',''null'')'
+		--bit
+		WHEN system_type_id =104 
+		  THEN 'Coalesce(case when '+QuoteName(name)+ '>0 then ''true'' else ''false'' end,''null'') '
+		--xml
+		WHEN system_type_id = 241 
+		  THEN 'Coalesce(''"''+String_Escape(convert(nvarchar(max),'+QuoteName(name)+'),''json'')+''"'',''null'')' 
+		ELSE 'Coalesce(''"''+String_Escape('+QuoteName(name)+',''json'') + ''"'',''null'')' END,'+'', ''+'
+	  ) +'+'']''' AS query
+	FROM sys.dm_exec_describe_first_result_set(@SourceCode, NULL, 1) r)
+  DECLARE @expression NVARCHAR(4000) =	'
 USE ' + @database + '
-SELECT @TheData=(SELECT ' + @params + ' FROM ' + QuoteName(@database) + '.'
-      + QuoteName(@Schema) + '.' + QuoteName(@table)
-      + ' FOR JSON auto, INCLUDE_NULL_VALUES)';
-    EXECUTE sp_executesql @expression, N'@TheData nvarchar(max) output',
-            @TheData = @Data OUTPUT;
-
-SELECT @jsonData ='['+ String_Agg(f.EachLine,',')+']'
-FROM 
-  (SELECT '['+String_Agg (
-     CASE WHEN shredded.type=1 
-       THEN '"'+String_Escape(Coalesce(shredded.value,'null'),'json')+'"'
-     ELSE Coalesce(shredded.value,'null') 
-     END, ',') +']'
-     AS TheValue
-  FROM OpenJson(@data) f
-   CROSS apply OpenJson(f.value) shredded
-   GROUP BY f.[Key])f(EachLine)
-  END;
+Select @TheData=(SELECT ''[''+String_Agg('+@params+','','')+'']''
+FROM ' + QuoteName(@database) + '.'
+      + QuoteName(@Schema) + '.' + QuoteName(@table)+');';
+  EXECUTE sp_executesql @expression, N'@TheData nvarchar(max) output',
+            @TheData = @JSONData OUTPUT;
+			IF IsJson(@JSONData) = 0 RAISERROR('{"Table %s did not produce valid JSON"}', 16, 1, @table);
+END
 GO
-
-
-
-
-
-
-
-
-
-
-
-
-
 
