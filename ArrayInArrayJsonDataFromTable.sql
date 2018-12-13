@@ -114,8 +114,6 @@ FROM ' + QuoteName(@database) + '.'
 Select @TheData= ''[''+String_Agg('+@params+','','')+'']''
 FROM (' + @query+')f('+@list+')'
     END
-PRINT @SourceCode
-PRINT @expression
   EXECUTE sp_executesql @expression, N'@TheData nvarchar(max) output',
             @TheData = @JSONData OUTPUT;
 			IF IsJson(@JSONData) = 0 RAISERROR('{"Table %s did not produce valid JSON"}', 16, 1, @table);
