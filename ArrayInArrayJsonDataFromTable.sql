@@ -11,7 +11,7 @@ Examples: >
   - use Adventureworks2016
     DECLARE @Json NVARCHAR(MAX)
     EXECUTE #ArrayInArrayJsonDataFromTable
-      @query = 'Select * from person.addresstype',
+      @query = 'Select name, name as second from person.addresstype',
 	  @JSONData=@json OUTPUT
     PRINT @Json
 
@@ -30,8 +30,12 @@ Examples: >
 Returns: >
   The JSON data
 **/
-  (@database sysname = NULL, @Schema sysname = NULL, @table sysname = NULL,
-  @Tablespec sysname = NULL, @Query NVARCHAR(MAX)=NULL, @jsonData NVARCHAR(MAX) OUTPUT
+  (@database sysname = NULL, 
+  @Schema sysname = NULL, 
+  @table sysname = NULL,
+  @Tablespec sysname = NULL, --this means
+  @Query NVARCHAR(MAX)=NULL, 
+  @jsonData NVARCHAR(MAX) OUTPUT
   )
 AS
   BEGIN
@@ -89,8 +93,8 @@ AS
 	  ) +'+'']''',
 	  @list=String_Agg(QuoteName(name),', '),
 	  @allErrors=String_Agg([error_message],', ')
-	FROM sys.dm_exec_describe_first_result_set(@SourceCode, NULL, 1) r
-
+	FROM sys.dm_exec_describe_first_result_set(@SourceCode, NULL, 1)r WHERE is_hidden=0 
+  
   DECLARE @expression NVARCHAR(4000)
   IF @params IS NULL 
   BEGIN
@@ -110,6 +114,8 @@ FROM ' + QuoteName(@database) + '.'
 Select @TheData= ''[''+String_Agg('+@params+','','')+'']''
 FROM (' + @query+')f('+@list+')'
     END
+PRINT @SourceCode
+PRINT @expression
   EXECUTE sp_executesql @expression, N'@TheData nvarchar(max) output',
             @TheData = @JSONData OUTPUT;
 			IF IsJson(@JSONData) = 0 RAISERROR('{"Table %s did not produce valid JSON"}', 16, 1, @table);
@@ -121,3 +127,6 @@ GO
 --DECLARE @TheJSON VARCHAR(MAX)
 --SELECT @TheJSON= '['+String_Agg('['+Coalesce(convert(nvarchar(max),[AddressTypeID]),'null')+', '+Coalesce('"'+String_Escape([Name],'json') + '"','null')+', '+Coalesce('"'+convert(nvarchar(max),[rowguid])+'"','null')+', '+Coalesce('"'+convert(nvarchar(max),[ModifiedDate],126)+'"','null')+']',',')+']'
 --FROM (Select * from person.addresstype)f([AddressTypeID], [Name], [rowguid], [ModifiedDate])
+
+--SELECT *  FROM sys.dm_exec_describe_first_result_set('SELECT name from person.addresstype', NULL, 1) r WHERE is_hidden=0
+--SELECT name from person.addresstype
