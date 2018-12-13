@@ -93,7 +93,7 @@ AS
 	  ) +'+'']''',
 	  @list=String_Agg(QuoteName(name),', '),
 	  @allErrors=String_Agg([error_message],', ')
-	FROM sys.dm_exec_describe_first_result_set(@SourceCode, NULL, 1)r WHERE is_hidden=0 
+	FROM sys.dm_exec_describe_first_result_set(@SourceCode, NULL, 1)r WHERE Coalesce(is_hidden,0)=0 
   
   DECLARE @expression NVARCHAR(4000)
   IF @params IS NULL 
@@ -119,12 +119,3 @@ FROM (' + @query+')f('+@list+')'
 			IF IsJson(@JSONData) = 0 RAISERROR('{"Table %s did not produce valid JSON"}', 16, 1, @table);
 END
 GO
-
---Select (SELECT '['+String_Agg('['+Coalesce(convert(nvarchar(max),[AddressTypeID]),'null')+', '+Coalesce('"'+String_Escape([Name],'json') + '"','null')+', '+Coalesce('"'+convert(nvarchar(max),[rowguid])+'"','null')+', '+Coalesce('"'+convert(nvarchar(max),[ModifiedDate],126)+'"','null')+']',',')+']'
---FROM (Select * from person.addresstype)f(addresstypeid)
---DECLARE @TheJSON VARCHAR(MAX)
---SELECT @TheJSON= '['+String_Agg('['+Coalesce(convert(nvarchar(max),[AddressTypeID]),'null')+', '+Coalesce('"'+String_Escape([Name],'json') + '"','null')+', '+Coalesce('"'+convert(nvarchar(max),[rowguid])+'"','null')+', '+Coalesce('"'+convert(nvarchar(max),[ModifiedDate],126)+'"','null')+']',',')+']'
---FROM (Select * from person.addresstype)f([AddressTypeID], [Name], [rowguid], [ModifiedDate])
-
---SELECT *  FROM sys.dm_exec_describe_first_result_set('SELECT name from person.addresstype', NULL, 1) r WHERE is_hidden=0
---SELECT name from person.addresstype
