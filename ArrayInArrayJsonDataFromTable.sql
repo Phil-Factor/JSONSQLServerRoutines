@@ -11,56 +11,77 @@ Examples: >
   - use Adventureworks2016
     DECLARE @Json NVARCHAR(MAX)
     EXECUTE #ArrayInArrayJsonDataFromTable
-      @query = 'Select name, name as second from person.addresstype',
-	  @JSONData=@json OUTPUT
+      @query = 'Select * from person.addresstype;',
+    @JSONData=@json OUTPUT
     PRINT @Json
 
   - use Adventureworks2016
     DECLARE @Json NVARCHAR(MAX)
     EXECUTE #ArrayInArrayJsonDataFromTable
+      @query = '
+    SELECT AccountNumber, PersonType, Title, FirstName, MiddleName, LastName,
+      Suffix, AddressLine1, AddressLine2, City, PostalCode, Name
+    FROM Sales.Customer
+      INNER JOIN Person.Person
+        ON Customer.PersonID = Person.BusinessEntityID
+      INNER JOIN Person.BusinessEntityAddress
+        ON Person.BusinessEntityID = BusinessEntityAddress.BusinessEntityID
+      INNER JOIN Person.Address
+        ON BusinessEntityAddress.AddressID = Address.AddressID
+      INNER JOIN Person.AddressType
+        ON BusinessEntityAddress.AddressTypeID = AddressType.AddressTypeID ;',
+    @JSONData=@json OUTPUT
+    PRINT @Json
+
+
+  - use Adventureworks2016
+    DECLARE @Json NVARCHAR(MAX)
+    EXECUTE #ArrayInArrayJsonDataFromTable
       @database='Adventureworks2016', 
-	  @Schema ='person', 
-	  @table= 'PersonPhone',
-	  @JSONData=@json OUTPUT
+      @Schema ='person', 
+      @table= 'PersonPhone',
+      @JSONData=@json OUTPUT
     PRINT @Json
 
   - DECLARE @Json NVARCHAR(MAX)
-	EXECUTE #ArrayInArrayJsonDataFromTable @TableSpec='Adventureworks2016.[production].[document]',@JSONData=@json OUTPUT
+    EXECUTE #ArrayInArrayJsonDataFromTable 
+      @TableSpec='Adventureworks2016.[production].[document]',
+      @JSONData=@json OUTPUT
     PRINT @Json
 Returns: >
   The JSON data
+
 **/
-  (@database sysname = NULL, 
-  @Schema sysname = NULL, 
-  @table sysname = NULL,
+  (@database sysname = NULL, @Schema sysname = NULL, @table sysname = NULL,
   @Tablespec sysname = NULL, --this means
-  @Query NVARCHAR(MAX)=NULL, 
-  @jsonData NVARCHAR(MAX) OUTPUT
+  @Query NVARCHAR(MAX) = NULL, @jsonData NVARCHAR(MAX) OUTPUT
   )
 AS
   BEGIN
-  DECLARE @SourceCode NVARCHAR(255)
-  IF @database IS NULL SELECT @database = Coalesce(ParseName(@Tablespec, 3),Db_Name());
-   IF @query IS NULL 
-	  BEGIN
-      IF Coalesce(@table, @Tablespec) IS NULL
-       OR Coalesce(@Schema, @Tablespec) IS NULL
-        RAISERROR('{"error":"must have the table details"}', 16, 1);
+    DECLARE @SourceCode NVARCHAR(4000);
+    IF @database IS NULL SELECT @database =
+Coalesce(ParseName(@Tablespec, 3), Db_Name());
+    IF @Query IS NULL
+      BEGIN
+        IF Coalesce(@table, @Tablespec) IS NULL
+        OR Coalesce(@Schema, @Tablespec) IS NULL
+          RAISERROR('{"error":"must have the table details"}', 16, 1);
 
-      IF @table IS NULL SELECT @table = ParseName(@Tablespec, 1);
-      IF @Schema IS NULL SELECT @Schema = ParseName(@Tablespec, 2);
-      IF @table IS NULL OR @Schema IS NULL OR @database IS NULL
-        RAISERROR('{"error":"must have the table details"}', 16, 1);
-	  SELECT @SourceCode  ='USE ' + @database + '; SELECT * FROM ' + QuoteName(@database) + '.'
-                 + QuoteName(@Schema) + '.' + QuoteName(@table)
-     END
-  ELSE
-	begin
-     SELECT @SourceCode ='USE ' + @database + ';'+@query
-     END   
- DECLARE @list	NVARCHAR(4000)  
- DECLARE @AllErrors NVARCHAR(4000)
- DECLARE @params NVARCHAR(MAX) 
+        IF @table IS NULL SELECT @table = ParseName(@Tablespec, 1);
+        IF @Schema IS NULL SELECT @Schema = ParseName(@Tablespec, 2);
+        IF @table IS NULL OR @Schema IS NULL OR @database IS NULL
+          RAISERROR('{"error":"must have the table details"}', 16, 1);
+        SELECT @SourceCode =
+          N'USE ' + @database + N'; SELECT * FROM ' + QuoteName(@database)
+          + N'.' + QuoteName(@Schema) + N'.' + QuoteName(@table);
+      END;
+    ELSE BEGIN
+SELECT @SourceCode = N'USE ' + @database + N';' + @Query;
+      END;
+    DECLARE @list NVARCHAR(4000);
+    DECLARE @AllErrors NVARCHAR(4000);
+    DECLARE @params NVARCHAR(MAX);
+-- SQL Prompt formatting off
  SELECT @params='''[''+'
    +String_Agg(
       CASE
@@ -95,27 +116,61 @@ AS
 	  @allErrors=String_Agg([error_message],', ')
 	FROM sys.dm_exec_describe_first_result_set(@SourceCode, NULL, 1)r WHERE Coalesce(is_hidden,0)=0 
   
-  DECLARE @expression NVARCHAR(4000)
-  IF @params IS NULL 
-  BEGIN
-  RAISERROR (@allErrors,16,1)
-  end
- if @query is NULL
-	BEGIN
-	SELECT @expression =	'
-USE ' + @database + '
-Select @TheData= ''[''+String_Agg('+@params+','','')+'']''
-FROM ' + QuoteName(@database) + '.'
-      + QuoteName(@Schema) + '.' + QuoteName(@table)+';'
-    end
-	ELSE
-	begin
-	SELECT @expression =	'USE ' + @database + ';
-Select @TheData= ''[''+String_Agg('+@params+','','')+'']''
-FROM (' + @query+')f('+@list+')'
-    END
-  EXECUTE sp_executesql @expression, N'@TheData nvarchar(max) output',
-            @TheData = @JSONData OUTPUT;
-			IF IsJson(@JSONData) = 0 RAISERROR('{"Table %s did not produce valid JSON"}', 16, 1, @table);
-END
+-- SQL Prompt formatting on
+    DECLARE @expression NVARCHAR(4000);
+    IF @params IS NULL
+      BEGIN
+        RAISERROR(
+                   'Source Code %s couldn''t be executed because %s',
+                   16,
+                   1,
+                   @SourceCode,
+                   @AllErrors
+                 );
+      END;
+    IF @Query IS NULL
+      BEGIN
+        SELECT @expression =
+          N'
+USE ' +   @database + N'
+Select @TheData= ''[''+String_Agg(' + @params + N','','')+'']''
+FROM ' +  QuoteName(@database) + N'.' + QuoteName(@Schema) + N'.'
+          + QuoteName(@table) + N';';
+      END;
+    ELSE
+      BEGIN --take out any trailing semicolon
+        SELECT @Query =
+          CASE WHEN Lastsemi < LastText THEN
+                 Left(query, Len(
+query + ';' COLLATE SQL_Latin1_General_CP1_CI_AI
+)                            - Lastsemi - 1)ELSE query END
+          FROM
+            (
+            SELECT query,
+              PatIndex(
+                        SemicolonWildcard,
+                        Reverse(
+';' + query COLLATE SQL_Latin1_General_CP1_CI_AI
+)                     COLLATE SQL_Latin1_General_CP1_CI_AI
+                      ) AS Lastsemi,
+              PatIndex(
+sqltextWildcard, Reverse(query) COLLATE SQL_Latin1_General_CP1_CI_AI
+)             AS LastText
+              FROM
+                (
+                SELECT @Query AS query, '%;%' AS SemicolonWildcard,
+                  '%[A-Z1-0_-]%' AS sqltextWildcard
+                ) AS f
+            ) AS g;
+        SELECT @expression =
+          N'USE ' + @database + N';
+Select @TheData= ''[''+String_Agg(' + @params + N','','')+'']''
+FROM ('                      + @Query + N')f(' + @list + N')';
+      END;
+    EXECUTE sp_executesql @expression, N'@TheData nvarchar(max) output',
+@TheData = @jsonData OUTPUT;
+    IF IsJson(@jsonData) = 0 RAISERROR(
+'{"Table %s did not produce valid JSON"}', 16, 1, @table
+);
+  END;
 GO
