@@ -1,7 +1,7 @@
 CREATE OR ALTER PROCEDURE #ArrayInArrayJsonDataFromTable
   /**
 Summary: >
-  This gets the JSON data from a table into 
+  This gets the JSON data from a query or table into 
   Array-in-Array JSON Format
 Author: phil factor
 Date: 26/10/2018
