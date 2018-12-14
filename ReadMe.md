@@ -17,7 +17,7 @@ classic `select * from ... FOR JSON` statement on the entire table. This procedu
 This will produce a JSON Array-in-Array schema from a table.
 This procedure needs SQL Server 2017 or later since it relies on `string_agg()`.
 
-##JSON Data creation
+## JSON Data creation
 
 ###  SaveJsonDataFromTable.sql
 
