@@ -120,13 +120,7 @@ SELECT @SourceCode = N'USE ' + @database + N';' + @Query;
     DECLARE @expression NVARCHAR(4000);
     IF @params IS NULL
       BEGIN
-        RAISERROR(
-                   'Source Code %s couldn''t be executed because %s',
-                   16,
-                   1,
-                   @SourceCode,
-                   @AllErrors
-                 );
+        RAISERROR( 'Source Code %s couldn''t be executed because %s',16,1,@SourceCode, @AllErrors);
       END;
     IF @Query IS NULL
       BEGIN
@@ -140,22 +134,21 @@ FROM ' +  QuoteName(@database) + N'.' + QuoteName(@Schema) + N'.'
     ELSE
       BEGIN --take out any trailing semicolon
         SELECT @Query =
-          CASE WHEN Lastsemi < LastText THEN
-                 Left(query, Len(
-query + ';' COLLATE SQL_Latin1_General_CP1_CI_AI
-)                            - Lastsemi - 1)ELSE query END
+          CASE WHEN Lastsemi < LastText 
+		  THEN Left(query, Len(query + ';' COLLATE SQL_Latin1_General_CP1_CI_AI) - Lastsemi - 1)
+		  ELSE query END
           FROM
             (
             SELECT query,
+              PatIndex
+			    (
+                SemicolonWildcard,
+                  Reverse(';' + query COLLATE SQL_Latin1_General_CP1_CI_AI)  
+				  COLLATE SQL_Latin1_General_CP1_CI_AI
+                 ) AS Lastsemi,
               PatIndex(
-                        SemicolonWildcard,
-                        Reverse(
-';' + query COLLATE SQL_Latin1_General_CP1_CI_AI
-)                     COLLATE SQL_Latin1_General_CP1_CI_AI
-                      ) AS Lastsemi,
-              PatIndex(
-sqltextWildcard, Reverse(query) COLLATE SQL_Latin1_General_CP1_CI_AI
-)             AS LastText
+                sqltextWildcard, 
+				Reverse(query) COLLATE SQL_Latin1_General_CP1_CI_AI) AS LastText
               FROM
                 (
                 SELECT @Query AS query, '%;%' AS SemicolonWildcard,
