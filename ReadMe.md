@@ -12,6 +12,10 @@ This temporary procedure creates a JSON schema from a table that
 matches the JSON you will get from doing a
 classic `select * from ... FOR JSON` statement on the entire table. This procedure needs SQL Server 2017 or later since it relies on `string_agg()`.
 
+### SaveExtendedJsonDataFromTable
+
+This temporary procedure This gets the JSON data from a table, taking into account all the problems that can come about such as dealing with CLR data types
+
 ### CreateJSONArrayInArraySchemaFromTable
 
 This will produce a JSON Array-in-Array schema from a table.
