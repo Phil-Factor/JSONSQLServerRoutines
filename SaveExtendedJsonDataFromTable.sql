@@ -1,24 +1,26 @@
 CREATE OR ALTER PROCEDURE #SaveExtendedJsonDataFromTable
   /**
 Summary: >
-  This gets the JSON data from a table 
+  This gets the Extended JSON data from a table. You can specify
+  it either by the database.schema.table 'tablespec, or do it
+  individually.
 Author: phil factor
-Date: 26/10/2018
+Date: 04/02/2019
 
 Examples: >
-  USE bigpubs
+  USE pubs
   DECLARE @Json NVARCHAR(MAX)
   EXECUTE #SaveExtendedJsonDataFromTable 
      @database='pubs', 
 	 @Schema ='dbo', 
-	 @table= 'authors',
+	 @table= 'jobs',
 	 @JSONData=@json OUTPUT
   PRINT @Json
 Returns: >
   The JSON data
 **/
   (@database sysname = NULL, @Schema sysname = NULL, @table sysname = NULL,
-  @Tablespec sysname = NULL, @jsonData NVARCHAR(MAX) OUTPUT
+  @tableSpec sysname,  @jsonData NVARCHAR(MAX) OUTPUT
   )
 AS
   BEGIN
@@ -29,8 +31,8 @@ AS
 
     IF @table IS NULL SELECT @table = ParseName(@Tablespec, 1);
     IF @Schema IS NULL SELECT @Schema = ParseName(@Tablespec, 2);
-    IF @database IS NULL SELECT @database =
-Coalesce(ParseName(@Tablespec, 3), Db_Name());
+    IF @database IS NULL 
+	  SELECT @database = Coalesce(ParseName(@Tablespec, 3), Db_Name());
     IF @table IS NULL OR @Schema IS NULL OR @database IS NULL
       RAISERROR('{"error":"must have the table details"}', 16, 1);
 
@@ -47,7 +49,6 @@ SELECT @HowManyUniqueKeys= Sum(Convert(INT,is_part_of_unique_key))
 SELECT @a_unique_key= CASE WHEN @HowManyUniqueKeys = 1 THEN 1 ELSE 0 END
  	
     DECLARE @params NVARCHAR(MAX);
-
     SELECT @params =
       String_Agg(
                   CASE WHEN system_type_id IN
@@ -73,12 +74,12 @@ SELECT @a_unique_key= CASE WHEN @HowManyUniqueKeys = 1 THEN 1 ELSE 0 END
                     --------binary
                     WHEN system_type_id IN
                     ( 165, -- varbinary
-                      173
-                    ) -- binary 
-                  THEN               name + ' as "' + name + '.$binary.base64", ''80'' as "' + name + '.$binary.subType"'
+                      173-- binary 
+                    ) 
+                  --THEN  name + ' as "' + name + '.$binary.hex", ''80'' as "' + name + '.$binary.subType"'
+                    THEN  name --I gave up. Extended json binary form is just awful
                     WHEN system_type_id = 34 THEN --image
-                      'convert(varbinary(max),' + name + ') as "' + name
-                      + '.$binary.base64"'
+                      'convert(varbinary(max),' + name + ') as "' + name + '"'
                     WHEN system_type_id IN (35) THEN --35 is text
                       'convert(varchar(max),' + name + ') as "' + name + '"'
                     WHEN system_type_id IN (99) THEN --ntext
@@ -131,70 +132,8 @@ USE ' + @database + '
 SELECT @TheData=(SELECT ' + @params + ' FROM ' + QuoteName(@database) + '.'
       + QuoteName(@Schema) + '.' + QuoteName(@table)
       + ' FOR JSON PATH)';
-	--PRINT @Expression
+	PRINT @Expression
     EXECUTE sp_executesql @expression, N'@TheData nvarchar(max) output',
 @TheData = @jsonData OUTPUT;
   END;
-GO
 
-
-/* lets just check the config and make sure that xp_cmdshell is enabled. */
-DECLARE @Settings TABLE (
-    name sysname, minimum INT, Maximum INT, config_value INT, run_value INT);
-INSERT INTO @Settings (name, minimum, Maximum, config_value, run_value)
-  EXECUTE sp_configure @configname = 'show advanced options';
-IF NOT EXISTS (
-  SELECT * FROM @Settings WHERE name = 'show advanced options'
-  AND run_value = 1)
-  BEGIN
-    EXECUTE sp_configure 'show advanced options', 1;
-    RECONFIGURE;
-  END;
-INSERT INTO @Settings (name, minimum, Maximum, config_value, run_value)
-  EXECUTE sp_configure @configname = 'xp_cmdshell';
-IF NOT EXISTS (
-  SELECT * FROM @Settings WHERE name = 'xp_cmdshell'
-  AND run_value = 1)
-  BEGIN
-    EXECUTE sp_configure 'xp_cmdshell', 1;
-    RECONFIGURE;
-  END;
-GO
-
-USE adventureworks2016
-DECLARE @ourPath1 sysname = 'C:\Data\RawData\AdventureWorks\ExtendedJSON\';
-Declare @command1 NVARCHAR(4000)= '
-DECLARE @Json NVARCHAR(MAX)
-EXECUTE #SaveExtendedJsonDataFromTable @TableSpec=''?'',@JSONData=@json OUTPUT
-CREATE TABLE ##myTemp (Bulkcol nvarchar(MAX))
-INSERT INTO ##myTemp (Bulkcol) SELECT @JSON
-EXECUTE xp_cmdshell ''bcp ##myTemp out "'+@ourPath1
-     +'?.JSON" -c -C 65001 -S '+@@Servername+' -T '', NO_OUTPUT;
-DROP TABLE ##myTemp'
-EXECUTE sp_msforeachtable @command1
-
-
-go
-DECLARE @Settings TABLE 
-    (name sysname, minimum INT, Maximum INT, config_value INT, run_value INT);
-INSERT INTO @Settings (name, minimum, Maximum, config_value, run_value)
-  EXECUTE sp_configure @configname = 'show advanced options';
-IF NOT EXISTS (
-  SELECT * FROM @Settings WHERE name = 'show advanced options'
-  AND run_value = 1)
-  BEGIN
-    EXECUTE sp_configure 'show advanced options', 1;
-    RECONFIGURE;
-  END;
-INSERT INTO @Settings (name, minimum, Maximum, config_value, run_value)
-  EXECUTE sp_configure @configname = 'xp_cmdshell';
-IF NOT EXISTS (
-  SELECT * FROM @Settings WHERE name = 'xp_cmdshell'
-  AND run_value = 0)
-  BEGIN
-    EXECUTE sp_configure 'xp_cmdshell', 0;
-    RECONFIGURE;
-  END; 
-
- -- SELECT Convert(CHAR(19),ModifiedDate,127), Convert(varCHAR(80),Convert(DATETIMEOFFSET,ModifiedDate),127) FROM [HumanResources].[JobCandidate]
-  --SELECT convert(datetime2(0),modifiedDate) FROM [HumanResources].[JobCandidate]
