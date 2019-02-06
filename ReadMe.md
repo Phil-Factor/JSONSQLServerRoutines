@@ -23,6 +23,10 @@ This procedure needs SQL Server 2017 or later since it relies on `string_agg()`.
 
 This gets the JSON data from a table, taking into account all the problems that can come about such as dealing with CLR data types
 
+### SaveExtendedJsonDataFromTable
+
+This temporary procedure This gets the JSON data from a table, taking into account all the problems that can come about such as dealing with CLR data types
+
 ### ArrayInArrayJSONDataFromTable
 
 This will produce a JSON Array-in-Array schema from either a table or a query.
