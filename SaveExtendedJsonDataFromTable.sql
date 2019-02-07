@@ -132,8 +132,9 @@ USE ' + @database + '
 SELECT @TheData=(SELECT ' + @params + ' FROM ' + QuoteName(@database) + '.'
       + QuoteName(@Schema) + '.' + QuoteName(@table)
       + ' FOR JSON PATH)';
-	PRINT @Expression
+	--PRINT @Expression
     EXECUTE sp_executesql @expression, N'@TheData nvarchar(max) output',
 @TheData = @jsonData OUTPUT;
   END;
+GO
 
