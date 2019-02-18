@@ -8,47 +8,77 @@ Author: phil factor
 Date: 04/02/2019
 
 Examples: >
-  USE pubs
-  DECLARE @Json NVARCHAR(MAX)
-  EXECUTE #SaveExtendedJsonDataFromTable 
+ - USE pubs
+   DECLARE @Json NVARCHAR(MAX)
+   EXECUTE #SaveExtendedJsonDataFromTable 
      @database='pubs', 
 	 @Schema ='dbo', 
 	 @table= 'jobs',
 	 @JSONData=@json OUTPUT
-  PRINT @Json
+   PRINT @Json
+ - use Adventureworks2016
+    DECLARE @Json NVARCHAR(MAX)
+    EXECUTE #SaveExtendedJsonDataFromTable 
+      @query = 'Select * from person.addresstype;',
+    @JSONData=@json OUTPUT
+    PRINT @Json
+ - use Adventureworks2016
+    DECLARE @Json NVARCHAR(MAX)
+    EXECUTE #SaveExtendedJsonDataFromTable 
+      @query = '
+    SELECT AccountNumber, PersonType, Title, FirstName, MiddleName, LastName,
+      Suffix, AddressLine1, AddressLine2, City, PostalCode, Name
+    FROM Sales.Customer
+      INNER JOIN Person.Person
+        ON Customer.PersonID = Person.BusinessEntityID
+      INNER JOIN Person.BusinessEntityAddress
+        ON Person.BusinessEntityID = BusinessEntityAddress.BusinessEntityID
+      INNER JOIN Person.Address
+        ON BusinessEntityAddress.AddressID = Address.AddressID
+      INNER JOIN Person.AddressType
+        ON BusinessEntityAddress.AddressTypeID = AddressType.AddressTypeID ;',
+    @JSONData=@json OUTPUT
+    PRINT @Json	
 Returns: >
   The JSON data
 **/
   (@database sysname = NULL, @Schema sysname = NULL, @table sysname = NULL,
-  @tableSpec sysname,  @jsonData NVARCHAR(MAX) OUTPUT
+  @tableSpec sysname = NULL , @Query NVARCHAR(4000) = null,  
+  @jsonData NVARCHAR(MAX) OUTPUT
   )
 AS
   BEGIN
-    DECLARE @Data NVARCHAR(MAX);
-    IF Coalesce(@table, @Tablespec) IS NULL
-    OR Coalesce(@Schema, @Tablespec) IS NULL
-      RAISERROR('{"error":"must have the table details"}', 16, 1);
-
-    IF @table IS NULL SELECT @table = ParseName(@Tablespec, 1);
-    IF @Schema IS NULL SELECT @Schema = ParseName(@Tablespec, 2);
+    DECLARE @SourceCode NVARCHAR(4000);
     IF @database IS NULL 
 	  SELECT @database = Coalesce(ParseName(@Tablespec, 3), Db_Name());
-    IF @table IS NULL OR @Schema IS NULL OR @database IS NULL
-      RAISERROR('{"error":"must have the table details"}', 16, 1);
+    IF @Query IS NULL
+      BEGIN
+        IF Coalesce(@table, @Tablespec) IS NULL
+        OR Coalesce(@Schema, @Tablespec) IS NULL
+          RAISERROR('{"error":"must have the table details"}', 16, 1);
 
-    DECLARE @SourceCode NVARCHAR(255) =
-              (
-              SELECT 'SELECT * FROM ' + QuoteName(@database) + '.'
-                     + QuoteName(@Schema) + '.' + QuoteName(@table)
-              );
-
-DECLARE @a_unique_key bit 
-DECLARE @HowManyUniqueKeys INT
-SELECT @HowManyUniqueKeys= Sum(Convert(INT,is_part_of_unique_key)) 
+        IF @table IS NULL SELECT @table = ParseName(@Tablespec, 1);
+        IF @Schema IS NULL SELECT @Schema = ParseName(@Tablespec, 2);
+        IF @table IS NULL OR @Schema IS NULL OR @database IS NULL
+          RAISERROR('{"error":"must have the table details"}', 16, 1);
+        SELECT @SourceCode =
+          N'USE ' + @database + N'; SELECT * FROM ' + QuoteName(@database)
+          + N'.' + QuoteName(@Schema) + N'.' + QuoteName(@table);
+      END;
+    ELSE 
+	  BEGIN
+        SELECT @SourceCode = N'USE ' + @database + N';' + @Query;
+      END;
+    DECLARE @a_unique_key bit 
+    DECLARE @HowManyUniqueKeys INT
+    SELECT @HowManyUniqueKeys= Sum(Convert(INT,is_part_of_unique_key)) 
 	  FROM sys.dm_exec_describe_first_result_set(@SourceCode, NULL, 1)
-SELECT @a_unique_key= CASE WHEN @HowManyUniqueKeys = 1 THEN 1 ELSE 0 END
- 	
+    SELECT @a_unique_key= CASE WHEN @HowManyUniqueKeys = 1 THEN 1 ELSE 0 END
+ 	--PRINT @sourcecode
     DECLARE @params NVARCHAR(MAX);
+	DECLARE @list NVARCHAR(4000);
+    DECLARE @AllErrors NVARCHAR(4000);
+
     SELECT @params =
       String_Agg(
                   CASE WHEN system_type_id IN
@@ -124,15 +154,49 @@ SELECT @a_unique_key= CASE WHEN @HowManyUniqueKeys = 1 THEN 1 ELSE 0 END
 				  ELSE QuoteName(name) 
 			      END,
                   ', '
-                )
-      FROM sys.dm_exec_describe_first_result_set(@SourceCode, NULL, 1);
-    DECLARE @expression NVARCHAR(max) =
-      '
-USE ' + @database + '
+                ),
+	  @list=String_Agg(QuoteName(name),', '),
+	  @allErrors=String_Agg(Coalesce([error_message]+',',''),'')
+      FROM sys.dm_exec_describe_first_result_set(@SourceCode, NULL, 1) WHERE Coalesce(is_hidden,0)=0 ;
+DECLARE @expression NVARCHAR(max)
+IF @query IS NULL 
+	begin	  
+    SELECT @expression = 'USE ' + @database + '
 SELECT @TheData=(SELECT ' + @params + ' FROM ' + QuoteName(@database) + '.'
       + QuoteName(@Schema) + '.' + QuoteName(@table)
       + ' FOR JSON PATH)';
-	--PRINT @Expression
+	END
+ ELSE
+	begin	
+	SELECT @Query =
+          CASE WHEN Lastsemi < LastText 
+		  THEN Left(query, Len(query + ';' COLLATE SQL_Latin1_General_CP1_CI_AI) - Lastsemi - 1)
+		  ELSE query END
+          FROM
+            (
+            SELECT query,
+			  PatIndex
+			    (
+                SemicolonWildcard,
+                  Reverse(';' + query COLLATE SQL_Latin1_General_CP1_CI_AI)  
+				  COLLATE SQL_Latin1_General_CP1_CI_AI
+                 ) AS Lastsemi,
+              PatIndex(
+                sqltextWildcard, 
+				Reverse(query) COLLATE SQL_Latin1_General_CP1_CI_AI) AS LastText
+              FROM
+                (
+                SELECT @Query AS query, '%;%' AS SemicolonWildcard,
+                  '%[A-Z1-0_-]%' AS sqltextWildcard
+                ) AS f
+            ) AS g;  
+    SELECT @expression = N'USE ' + @database + N';
+Select @TheData= (SELECT '+ @params + N'
+FROM (' + @Query + N')f(' + @list + N') for json path)';
+ end   
+   --PRINT @sourcecode
+   --PRINT @expression
+   IF RTrim(@Allerrors)<>'' RAISERROR ('Query could not be executed. %s )',16,1,@AllErrors COLLATE )
     EXECUTE sp_executesql @expression, N'@TheData nvarchar(max) output',
 @TheData = @jsonData OUTPUT;
   END;

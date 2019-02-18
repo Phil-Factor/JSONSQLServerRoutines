@@ -75,8 +75,9 @@ Coalesce(ParseName(@Tablespec, 3), Db_Name());
           N'USE ' + @database + N'; SELECT * FROM ' + QuoteName(@database)
           + N'.' + QuoteName(@Schema) + N'.' + QuoteName(@table);
       END;
-    ELSE BEGIN
-SELECT @SourceCode = N'USE ' + @database + N';' + @Query;
+    ELSE 
+	  BEGIN
+        SELECT @SourceCode = N'USE ' + @database + N';' + @Query;
       END;
     DECLARE @list NVARCHAR(4000);
     DECLARE @AllErrors NVARCHAR(4000);
@@ -115,7 +116,7 @@ SELECT @SourceCode = N'USE ' + @database + N';' + @Query;
 	  @list=String_Agg(QuoteName(name),', '),
 	  @allErrors=String_Agg([error_message],', ')
 	FROM sys.dm_exec_describe_first_result_set(@SourceCode, NULL, 1)r WHERE Coalesce(is_hidden,0)=0 
-  
+	
 -- SQL Prompt formatting on
     DECLARE @expression NVARCHAR(4000);
     IF @params IS NULL
