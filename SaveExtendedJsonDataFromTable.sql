@@ -145,13 +145,17 @@ AS
                     -------numberDecimal
                     WHEN system_type_id IN
                     ( 106, -- decimal
-                      108, -- numeric
-                      122, -- smallmoney
-                      60
-                    ) -- money					
+                      108 -- numeric
+                    ) 					
                   THEN
                     'convert(varchar(50),' + name + ') as "' + name + '.$numberDecimal"' 
-				  ELSE QuoteName(name) 
+WHEN system_type_id IN
+                    ( 
+                      122, -- smallmoney
+                      60   -- money
+                    ) 					
+                  THEN
+                    'convert(varchar(50),' + name + ', 2) as "' + name + '.$numberDecimal"' 				  ELSE QuoteName(name) 
 			      END,
                   ', '
                 ),
@@ -196,7 +200,7 @@ FROM (' + @Query + N')f(' + @list + N') for json path)';
  end   
    --PRINT @sourcecode
    --PRINT @expression
-   IF RTrim(@Allerrors)<>'' RAISERROR ('Query could not be executed. %s )',16,1,@AllErrors COLLATE )
+   IF RTrim(@Allerrors)<>'' RAISERROR ('Query could not be executed. %s )',16,1,@AllErrors)
     EXECUTE sp_executesql @expression, N'@TheData nvarchar(max) output',
 @TheData = @jsonData OUTPUT;
   END;
