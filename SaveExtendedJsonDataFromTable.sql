@@ -200,7 +200,7 @@ FROM (' + @Query + N')f(' + @list + N') for json path)';
  end   
    --PRINT @sourcecode
    --PRINT @expression
-   IF RTrim(@Allerrors)<>'' RAISERROR ('Query could not be executed. %s )',16,1,@AllErrors)
+   IF RTrim(@Allerrors)<>'' RAISERROR ('Query could not be executed. %s )',16,1,@AllErrors   )
     EXECUTE sp_executesql @expression, N'@TheData nvarchar(max) output',
 @TheData = @jsonData OUTPUT;
   END;
