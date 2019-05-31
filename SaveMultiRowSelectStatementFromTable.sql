@@ -102,7 +102,7 @@ case when @Destination is not null then 'Insert into '+@Destination+' ('+@Params
 	    ('+@Finalquery+' FOR JSON PATH, INCLUDE_NULL_VALUES)
 	  )
     ) AS f(row));'
-  print @expression
+  --print @expression
     EXECUTE sp_executesql @expression, N'@TheData nvarchar(max) output',
 @TheData = @Statement   OUTPUT;
   END
