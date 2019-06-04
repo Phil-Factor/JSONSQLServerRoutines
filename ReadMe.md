@@ -54,6 +54,12 @@ This is a utility stored procedure for
 saving text to a file It is designed to save
 as utf-8 for JSON files but will do any file
 
+###  SaveMultiRowSelectStatementFromTable 
+
+This gets a multirow derived table SELECT * from (VALUES)  statement 
+from a table or a query. If you provide a destination, it will create
+the entire statement to stock the table with data.
+  
 ## PowerShell Validation
 
 ### ValidateViaJSONSchema.ps1
