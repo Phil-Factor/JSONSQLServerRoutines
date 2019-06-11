@@ -172,29 +172,8 @@ SELECT @TheData=(SELECT ' + @params + ' FROM ' + QuoteName(@database) + '.'
 	END
  ELSE
 	begin	
-	SELECT @Query =
-          CASE WHEN Lastsemi < LastText 
-		  THEN Left(query, Len(query + ';' COLLATE SQL_Latin1_General_CP1_CI_AI) - Lastsemi - 1)
-		  ELSE query END
-          FROM
-            (
-            SELECT query,
-			  PatIndex
-			    (
-                SemicolonWildcard,
-                  Reverse(';' + query COLLATE SQL_Latin1_General_CP1_CI_AI)  
-				  COLLATE SQL_Latin1_General_CP1_CI_AI
-                 ) AS Lastsemi,
-              PatIndex(
-                sqltextWildcard, 
-				Reverse(query) COLLATE SQL_Latin1_General_CP1_CI_AI) AS LastText
-              FROM
-                (
-                SELECT @Query AS query, '%;%' AS SemicolonWildcard,
-                  '%[A-Z1-0_-]%' AS sqltextWildcard
-                ) AS f
-            ) AS g;  
-    SELECT @expression = N'USE ' + @database + N';
+    SELECT @query = left(@Query,patindex('%; ',rtrim(@Query)+' ' COLLATE SQL_Latin1_General_CP1_CI_AI)-1) 
+	SELECT @expression = N'USE ' + @database + N';
 Select @TheData= (SELECT '+ @params + N'
 FROM (' + @Query + N')f(' + @list + N') for json path)';
  end   
