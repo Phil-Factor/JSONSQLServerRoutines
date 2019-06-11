@@ -6,13 +6,13 @@ generally script them there is little point in maintaining a permanent procedure
 
 ## Schema creation
 
-### CreateJSONSchemaFromTable
+### CreateJSONSchemaFromTable.sql
 
 This temporary procedure creates a JSON schema from a table that
 matches the JSON you will get from doing a
 classic `select * from ... FOR JSON` statement on the entire table. This procedure needs SQL Server 2017 or later since it relies on `string_agg()`.
 
-### CreateJSONArrayInArraySchemaFromTable
+### CreateJSONArrayInArraySchemaFromTable.sql
 
 This will produce a JSON Array-in-Array schema from a table.
 This procedure needs SQL Server 2017 or later since it relies on `string_agg()`.
@@ -23,11 +23,11 @@ This procedure needs SQL Server 2017 or later since it relies on `string_agg()`.
 
 This gets the JSON data from a table, taking into account all the problems that can come about such as dealing with CLR data types
 
-### SaveExtendedJsonDataFromTable
+### SaveExtendedJsonDataFromTable.sql
 
 This temporary procedure This gets the JSON data from a table, taking into account all the problems that can come about such as dealing with CLR data types
 
-### ArrayInArrayJSONDataFromTable
+### ArrayInArrayJSONDataFromTable.sql
 
 This will produce a JSON Array-in-Array schema from either a table or a query.
 This can't be done, unfortunately, from SQL Server's implementation of JSON.
@@ -54,11 +54,11 @@ This is a utility stored procedure for
 saving text to a file It is designed to save
 as utf-8 for JSON files but will do any file
 
-###  SaveMultiRowSelectStatementFromTable 
+###  SaveMultiRowSelectStatementFromTable.sql 
 
 This gets a multirow derived table SELECT * from (VALUES)  statement 
 from a table or a query. If you provide a destination, it will create
-the entire statement to stock the table with data.
+the entire statement to stock the table with data. Warning: This is slow to use with large tables- use JSON instead as it is quicker, surprisingly.
   
 ## PowerShell Validation
 
