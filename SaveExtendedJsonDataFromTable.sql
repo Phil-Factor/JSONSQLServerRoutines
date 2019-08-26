@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE #SaveExtendedJsonDataFromTable
+CREATE OR alter PROCEDURE #SaveExtendedJsonDataFromTable
   /**
 Summary: >
   This gets the Extended JSON data from a table. You can specify
