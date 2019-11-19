@@ -102,7 +102,7 @@ AS
             WHEN system_type_id IN (36,165)  
               THEN 'convert(nvarchar(max),' + QuoteName(name) + ')AS "'+name+'"'
             WHEN system_type_id = 34 --image type
-			THEN  'cast(cast(' + QuoteName(name) + ' as varbinary(max)) as varchar(max)) AS "'+name+'"'
+			THEN  'cast(' + QuoteName(name) + ' as varbinary(max)) AS "'+name+'"'
            --xml
            --WHEN system_type_id = 241 
           ELSE QuoteName(name) END,', ')
