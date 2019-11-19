@@ -60,6 +60,16 @@ This gets a multirow derived table SELECT * from (VALUES)  statement
 from a table or a query. If you provide a destination, it will create
 the entire statement to stock the table with data. Warning: This is slow to use with large tables- use JSON instead as it is quicker, surprisingly.
   
+###  SaveMergeStatementFromTable 
+
+This creates a merge statement, creating a table source from a multi-row 
+VALUES statement, and merging it with the table whose name you provide.
+This MERGE statement can then be executed. Beware
+that this is only really practicable for small tables, because the VALUES statement degrades with scale.
+
+The source is specified either by the database.schema.table 'tablespec, 
+or by doing tablename, schema and database individually. You can also use queries
+  
 ## PowerShell Validation
 
 ### ValidateViaJSONSchema.ps1
