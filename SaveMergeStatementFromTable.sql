@@ -99,8 +99,10 @@ AS
             WHEN system_type_id IN (35,99)   
               THEN 'convert(nvarchar(max),' + QuoteName(name)  + ')AS "'+name+'"'
             --image varbinary snd uniqueIdentifier
-            WHEN system_type_id IN (34,36.165)  
+            WHEN system_type_id IN (36,165)  
               THEN 'convert(nvarchar(max),' + QuoteName(name) + ')AS "'+name+'"'
+            WHEN system_type_id = 34 --image type
+			THEN  'cast(cast(' + QuoteName(name) + ' as varbinary(max)) as varchar(max)) AS "'+name+'"'
            --xml
            --WHEN system_type_id = 241 
           ELSE QuoteName(name) END,', ')
@@ -238,17 +240,4 @@ IF @@ERROR <> 0 SET NOEXEC ON
     END
   END
 GO
-USE AdventureWorks2016
-DECLARE @ourPath sysname ='C:\data\RawData\AdventureWorks2016\MergeData\';
-DECLARE @TheServer sysname =@@ServerName
-Declare @command NVARCHAR(4000)= '
-print ''Creating SQL Merge file for ?''
-DECLARE @CreatedScript NVARCHAR(MAX)
-EXECUTE #SaveMergeStatementFromTable  @TableSpec=''?'', @Statement=@CreatedScript OUTPUT
-CREATE TABLE ##myTemp (Bulkcol nvarchar(MAX))
-INSERT INTO ##myTemp (Bulkcol) SELECT @CreatedScript
-print ''Writing out ?''
-EXECUTE xp_cmdshell ''bcp ##myTemp out '+@ourPath+'?.SQL -c -C 65001 -T -S '+@TheServer+' ''
-DROP TABLE ##myTemp'
-EXECUTE sp_msforeachtable @command
-GO
+
