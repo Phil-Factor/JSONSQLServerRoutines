@@ -1,3 +1,4 @@
+
 DROP PROCEDURE IF exists #SaveMergeStatementFromTable
 GO
 CREATE PROCEDURE #SaveMergeStatementFromTable 
@@ -90,6 +91,7 @@ AS
     DECLARE @ColumnExpressions NVARCHAR(4000)
     SELECT 
 	  @ColumnExpressions=
+-- SQL Prompt formatting off
         String_Agg(
           CASE
            --hierarchyid, geometry,and geography types  can be coerced. 
@@ -105,8 +107,8 @@ AS
 			THEN  'cast(' + QuoteName(name) + ' as varbinary(max)) AS "'+name+'"'
            --xml
            --WHEN system_type_id = 241 
-          ELSE QuoteName(name) END,', ')
-       WITHIN GROUP ( ORDER BY column_ordinal ASC ),
+          ELSE QuoteName(name) END,', ') WITHIN GROUP ( ORDER BY column_ordinal ASC ),
+-- SQL Prompt formatting on
       --@list=String_Agg(QuoteName(name),', '),
        @allErrors=String_Agg([error_message],', ')
 --SELECT String_Agg(name,',')     WITHIN GROUP ( ORDER BY column_ordinal ASC ) 
