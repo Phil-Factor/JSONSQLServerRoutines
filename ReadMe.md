@@ -70,6 +70,28 @@ that this is only really practicable for small tables, because the VALUES statem
 The source is specified either by the database.schema.table 'tablespec, 
 or by doing tablename, schema and database individually. You can also use queries
   
+## JSON Data Discovery
+
+###  UnwrapJSON.sql
+
+This multi-statement table-valued function talkes a JSON string and
+  unwraps it into a relational hierarchy table that also retains
+  the path to each element in the JSON document, and calculates the
+  best-fit sql datatype for every simple value
+
+###  OpenJSONExpressions.sql 
+
+  This inline table-valued function talkes a JSON string and
+  locates every table structure. Then it creates an OpenJSON
+  Statement that can then be executed to create that table
+  from the original JSON.
+  
+###  TablesFromJSON 
+
+ This procedure returns a table for every one found  in a JSON 
+  string 
+   
+  
 ## PowerShell routines 
 
 ### ValidateViaJSONSchema.ps1
