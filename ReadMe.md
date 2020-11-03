@@ -70,8 +70,12 @@ that this is only really practicable for small tables, because the VALUES statem
 The source is specified either by the database.schema.table 'tablespec, 
 or by doing tablename, schema and database individually. You can also use queries
   
-## PowerShell Validation
+## PowerShell routines 
 
 ### ValidateViaJSONSchema.ps1
 
 Shows how to validate a directory, with a subdirectory with the schema and a parallel directory with the data
+
+### GenerateSQLMergeScripts.ps1
+
+This is a PowerShell script uses SaveMergeStatementFromTable.sql to generate a gigantic merge script for all the tables of a (small) database.
